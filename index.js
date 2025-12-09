@@ -6,7 +6,7 @@ import path from "node:path";
 
 const rl = readline.createInterface({ input, output });
 
-//❌ ✅ ❗ ✔
+//❌ ✅ ❗ ✔ ❓
 const answer = await rl.question("What operation you want: ");
 
 const operations = answer.split(" ");
@@ -29,12 +29,17 @@ let fileHandle;
 try {
   if (command === "add") {
     fileHandle = await fs.open(pathFile, "wx");
-    console.log("❌ ✅ ❗ ✔ File created successfully");
+
+    console.log("✅  File created successfully");
   }
   if (command === "append") {
     const fileAppend = await rl.question("What do you want to append: \n");
     await fs.appendFile(pathFile, fileAppend + "\n");
     console.log(fileAppend);
+  }
+  if (command === "delete") {
+    await fs.unlink(pathFile);
+    console.log("❌ File is removed successfully");
   }
 } catch (err) {
   console.error(err.message);
