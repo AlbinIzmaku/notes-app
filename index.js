@@ -3,25 +3,51 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import { stdin as input, stdout as output } from "node:process";
 import path from "node:path";
+
 const rl = readline.createInterface({ input, output });
 
-//❌ ✅ ❗
+//❌ ✅ ❗ ✔
 const answer = await rl.question("What operation you want: ");
-// console.log(answer)
+
 const operations = answer.split(" ");
-// console.log(operations);
+const command = operations[0];
+const file = operations[1];
+const message = operations[2];
+
 const homeDir = os.homedir();
+const pathFile = path.join(homeDir, file);
 
 try {
   await fs.mkdir(homeDir, {
     recursive: true,
   });
-  const pathFile = path.join(homeDir, operations[1]);
-  await fs.writeFile(pathFile, "Hello World!");
-
-  console.log(`Directory is created at ${homeDir}\\${operations[1]}`);
 } catch (err) {
-  console.error(err);
+  console.error(err.message);
 }
+
+let fileHandle;
+try {
+  if (command === "add") {
+    fileHandle = await fs.open(pathFile, "wx");
+    console.log("❌ ✅ ❗ ✔ File created successfully");
+  }
+  if (command === "append") {
+    const fileAppend = await rl.question("What do you want to append: \n");
+    await fs.appendFile(pathFile, fileAppend + "\n");
+    console.log(fileAppend);
+  }
+} catch (err) {
+  console.error(err.message);
+} finally {
+  if (fileHandle) {
+    await fileHandle.close();
+  }
+}
+// try {
+//   await fs.writeFile(pathFile, "Hello World!");
+//   console.log(`Directory is created at ${pathFile}`);
+// } catch (err) {
+//   console.error(err);
+// }
 
 rl.close();
