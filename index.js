@@ -1,58 +1,64 @@
 import * as readline from "node:readline/promises";
-import * as fs from "node:fs/promises";
-import * as os from "node:os";
 import { stdin as input, stdout as output } from "node:process";
-import path from "node:path";
+import * as fs from "node:fs/promises";
+
+
 
 const rl = readline.createInterface({ input, output });
-
-//❌ ✅ ❗ ✔ ❓
 const answer = await rl.question("What operation you want: ");
 
-const operations = answer.split(" ");
-const command = operations[0];
-const file = operations[1];
-const message = operations[2];
+//add --title="Shopping" --body="Buy milk"
+//add --title="Gym" --body="Go at 20:00"
+const task = answer.split(" --");
 
-const homeDir = os.homedir();
-const pathFile = path.join(homeDir, file);
+const [operation, flag1, flag2] = task;
+
+const titleValue = flag1?.split("=")[1]?.replace(/"/g, "");
+const bodyValue = flag2?.split("=")[1]?.replace(/"/g, "");
+
+const notes = await fs.open("./notes.json", "r+");
+const readNotes = await notes.readFile({ encoding: "utf8" });
+const formattedNotes = JSON.parse(readNotes);
+const lastId = formattedNotes[formattedNotes.length - 1]?.id + 1;
+
+const note = {
+  id: lastId ? lastId : 1,
+  title: titleValue,
+  body: bodyValue,
+};
+
+// console.log(formattedNotes);
 
 try {
-  await fs.mkdir(homeDir, {
-    recursive: true,
+  if (operation === "add") {
+    formattedNotes.push(note);
+    await fs.writeFile("./notes.json", JSON.stringify(formattedNotes));
+    console.log("✅ Note added successfully");
+  }
+} catch (err) {
+  console.error(err.message);
+}
+
+if (operation === "find") {
+  const readNote = formattedNotes.find((note) => note.title === titleValue);
+  console.log(readNote.body);
+}
+
+if (operation === "remove") {
+  const matchIndex = formattedNotes.findIndex(
+    (note) => note.title === titleValue
+  );
+
+  const removeNote = formattedNotes.splice(matchIndex, 1);
+
+  await fs.writeFile("./notes.json", JSON.stringify(formattedNotes));
+}
+
+if (operation === "list") {
+  formattedNotes.map((note) => {
+    console.log(note.title);
   });
-} catch (err) {
-  console.error(err.message);
 }
 
-let fileHandle;
-try {
-  if (command === "add") {
-    fileHandle = await fs.open(pathFile, "wx");
-
-    console.log("✅  File created successfully");
-  }
-  if (command === "append") {
-    const fileAppend = await rl.question("What do you want to append: \n");
-    await fs.appendFile(pathFile, fileAppend + "\n");
-    console.log(fileAppend);
-  }
-  if (command === "delete") {
-    await fs.unlink(pathFile);
-    console.log("❌ File is removed successfully");
-  }
-} catch (err) {
-  console.error(err.message);
-} finally {
-  if (fileHandle) {
-    await fileHandle.close();
-  }
-}
-// try {
-//   await fs.writeFile(pathFile, "Hello World!");
-//   console.log(`Directory is created at ${pathFile}`);
-// } catch (err) {
-//   console.error(err);
-// }
-
+await notes.close();
 rl.close();
