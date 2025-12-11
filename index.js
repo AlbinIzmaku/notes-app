@@ -2,63 +2,81 @@ import * as readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 import * as fs from "node:fs/promises";
 
-
-
 const rl = readline.createInterface({ input, output });
-const answer = await rl.question("What operation you want: ");
-
-//add --title="Shopping" --body="Buy milk"
-//add --title="Gym" --body="Go at 20:00"
-const task = answer.split(" --");
-
-const [operation, flag1, flag2] = task;
-
-const titleValue = flag1?.split("=")[1]?.replace(/"/g, "");
-const bodyValue = flag2?.split("=")[1]?.replace(/"/g, "");
-
-const notes = await fs.open("./notes.json", "r+");
-const readNotes = await notes.readFile({ encoding: "utf8" });
-const formattedNotes = JSON.parse(readNotes);
-const lastId = formattedNotes[formattedNotes.length - 1]?.id + 1;
-
-const note = {
-  id: lastId ? lastId : 1,
-  title: titleValue,
-  body: bodyValue,
-};
-
-// console.log(formattedNotes);
 
 try {
-  if (operation === "add") {
-    formattedNotes.push(note);
-    await fs.writeFile("./notes.json", JSON.stringify(formattedNotes));
-    console.log("✅ Note added successfully");
+  const answer = await rl.question("What operation you want: ");
+
+  const task = answer.split(" --");
+  const [operation, flag1, flag2] = task;
+
+  if (!operation) {
+    throw new Error("No operation provided.");
   }
+
+  const titleValue = flag1?.split("=")[1]?.replace(/"/g, "") ?? null;
+  const bodyValue = flag2?.split("=")[1]?.replace(/"/g, "") ?? null;
+
+  const file = await fs.open("./notes.json", "r+");
+  const data = await file.readFile({ encoding: "utf8" });
+
+  let notes = [];
+  try {
+    notes = JSON.parse(data);
+  } catch {
+    throw new Error("notes.json contains invalid JSON.");
+  }
+  const lastId = notes[notes.length - 1]?.id + 1 || 1;
+
+  switch (operation) {
+    case "add":
+      if (!titleValue) throw new Error("Title is required to add a note.");
+      if (!bodyValue) throw new Error("Body is required to add a note.");
+      const newNote = {
+        id: lastId,
+        title: titleValue,
+        body: bodyValue,
+      };
+      notes.push(newNote);
+      await fs.writeFile("./notes.json", JSON.stringify(notes, null, 2));
+      console.log("✅ Note added successfully");
+      break;
+    case "find":
+      if (!titleValue) throw new Error("Title is required to find a note.");
+
+      const found = notes.find((n) => n.title === titleValue);
+      if (!found) throw new Error("Note not found.");
+      console.log("📌 Found note:");
+      console.log("Title:", found.title);
+      console.log("Body:", found.body);
+      break;
+    case "remove":
+      if (!titleValue) throw new Error("Title is required to remove a note.");
+
+      const index = notes.findIndex((n) => n.title === titleValue);
+      if (index === -1) throw new Error("Note not found.");
+
+      const removed = notes.splice(index, 1)[0];
+      await fs.writeFile("./notes.json", JSON.stringify(notes, null, 2));
+      console.log("🗑️ Removed note:", removed.title);
+      break;
+    case "list":
+      if (!notes.length) {
+        console.log("No notes found.");
+      } else {
+        console.log("📒 Notes:");
+        notes.forEach((n) => console.log("- " + n.title));
+      }
+      break;
+    default:
+      throw new Error(`Unknown operation: ${operation}`);
+  }
+
+  await file.close();
 } catch (err) {
-  console.error(err.message);
+  console.error("❌ Error: ", err.message);
+} finally {
+  rl.close();
 }
-
-if (operation === "find") {
-  const readNote = formattedNotes.find((note) => note.title === titleValue);
-  console.log(readNote.body);
-}
-
-if (operation === "remove") {
-  const matchIndex = formattedNotes.findIndex(
-    (note) => note.title === titleValue
-  );
-
-  const removeNote = formattedNotes.splice(matchIndex, 1);
-
-  await fs.writeFile("./notes.json", JSON.stringify(formattedNotes));
-}
-
-if (operation === "list") {
-  formattedNotes.map((note) => {
-    console.log(note.title);
-  });
-}
-
-await notes.close();
-rl.close();
+//add --title="Shopping" --body="Buy milk"
+//add --title="Gym" --body="Go at 20:00"
